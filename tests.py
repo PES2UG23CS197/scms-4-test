@@ -122,6 +122,11 @@ def test_reset_simulation():
     conn = get_connection()
     cursor = conn.cursor()
 
+    print(">>> Deleting dependent data")
+    cursor.execute("DELETE FROM DemandForecast")
+    cursor.execute("DELETE FROM Orders")
+    cursor.execute("DELETE FROM Inventory")
+
     print(">>> Deleting Products")
     cursor.execute("DELETE FROM Products")
 
