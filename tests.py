@@ -1,19 +1,16 @@
-"""Test suite for SCMS core functionalities."""
-
-from decimal import Decimal
-import pytest
-
 from db.queries import (
     add_product, get_all_products, update_product, delete_product,
     add_inventory, get_inventory, get_low_stock,
     move_product, get_route_cost, get_cheapest_route_details,
     place_order, get_orders, update_order_status, delete_order,
     add_forecast, get_forecast, get_inventory_for_forecast,
-    generate_summary_report, get_connection
+    generate_summary_report, reset_simulation, get_connection
 )
+from decimal import Decimal
+import pytest
 
+# F-001: Add/Edit/Delete Product
 def test_add_update_delete_product():
-    """Test adding, updating, and deleting a product."""
     sku = "TESTSKU"
     delete_product(sku)
     add_product(sku, "Test Product", "Test Desc", 5)
@@ -30,15 +27,13 @@ def test_add_update_delete_product():
     products = get_all_products()
     assert not any(p[0] == sku for p in products)
 
+# F-002 & F-003: Inventory Tracking & Low Stock Alert
 def test_inventory_tracking_and_alert():
-    """Test inventory addition and low stock alert."""
     sku = "SKU001"
     location = "Warehouse A"
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "DELETE FROM Inventory WHERE sku = %s AND location = %s", (sku, location)
-    )
+    cursor.execute("DELETE FROM Inventory WHERE sku = %s AND location = %s", (sku, location))
     conn.commit()
 
     add_inventory(sku, location, 3)
@@ -48,8 +43,8 @@ def test_inventory_tracking_and_alert():
     low_stock = get_low_stock()
     assert any(i[0] == sku and i[2] == location for i in low_stock)
 
+# F-004, F-005, F-008: Move Product, Transport Cost, Route Optimization
 def test_move_product_and_cost():
-    """Test moving product and verifying transport cost."""
     sku = "SKU001"
     origin = "Warehouse A"
     destination = "Retail Hub 1"
@@ -57,14 +52,8 @@ def test_move_product_and_cost():
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "DELETE FROM Inventory WHERE sku = %s AND location IN (%s, %s)",
-        (sku, origin, destination)
-    )
-    cursor.execute(
-        "INSERT INTO Inventory (sku, location, quantity) VALUES (%s, %s, %s)",
-        (sku, origin, 20)
-    )
+    cursor.execute("DELETE FROM Inventory WHERE sku = %s AND location IN (%s, %s)", (sku, origin, destination))
+    cursor.execute("INSERT INTO Inventory (sku, location, quantity) VALUES (%s, %s, %s)", (sku, origin, 20))
     conn.commit()
 
     cost = get_route_cost(origin, destination)
@@ -78,8 +67,8 @@ def test_move_product_and_cost():
     dest_qty = [i[3] for i in inventory if i[1] == sku and i[2] == destination]
     assert dest_qty and dest_qty[0] >= quantity
 
+# F-006: Place, Update, Delete Order
 def test_order_flow():
-    """Test placing, updating, and deleting an order."""
     sku = "SKU001"
     user = "TestUser"
     location = "Retail Hub 1"
@@ -97,8 +86,8 @@ def test_order_flow():
     orders = get_orders(user, "User")
     assert not any(o[0] == order_id for o in orders)
 
+# F-007: Forecast Demand
 def test_forecast_and_gap():
-    """Test demand forecasting and inventory gap calculation."""
     sku = "SKU001"
     add_forecast(sku, 10, "2025-11-10")
     forecasts = get_forecast()
@@ -107,43 +96,28 @@ def test_forecast_and_gap():
     inventory = get_inventory_for_forecast(sku)
     assert isinstance(inventory, (int, float, Decimal))
 
+# F-009: Reporting
 def test_summary_report():
-    """Test generation of summary report."""
     report = generate_summary_report()
     assert "Total Orders" in report
     assert "Processed Orders" in report
     assert "Low Stock Items" in report
     assert "Total Logistics Cost" in report
 
+# F-010: Reset Simulation
 @pytest.mark.timeout(10)
-def test_reset_simulation():
-    """Test resetting simulation data."""
+def reset_simulation():
     print(">>> Entered reset_simulation")
     conn = get_connection()
     cursor = conn.cursor()
-
-    print(">>> Deleting dependent data")
-    cursor.execute("DELETE FROM DemandForecast")
-    cursor.execute("DELETE FROM Orders")
-    cursor.execute("DELETE FROM Inventory")
-    cursor.execute("DELETE FROM Logistics")  # Added to fix FK constraint
 
     print(">>> Deleting Products")
     cursor.execute("DELETE FROM Products")
 
     print(">>> Inserting default products")
-    cursor.execute(
-        "INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)",
-        ("SKU001", "Product A", "Desc", 10)
-    )
-    cursor.execute(
-        "INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)",
-        ("SKU002", "Product B", "Desc", 15)
-    )
-    cursor.execute(
-        "INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)",
-        ("SKU003", "Product C", "Desc", 20)
-    )
+    cursor.execute("INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)", ("SKU001", "Product A", "Desc", 10))
+    cursor.execute("INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)", ("SKU002", "Product B", "Desc", 15))
+    cursor.execute("INSERT INTO Products (sku, name, description, price) VALUES (%s, %s, %s, %s)", ("SKU003", "Product C", "Desc", 20))
 
     conn.commit()
     print(">>> reset_simulation complete")
