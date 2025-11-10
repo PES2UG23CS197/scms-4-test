@@ -126,6 +126,7 @@ def test_reset_simulation():
     cursor.execute("DELETE FROM DemandForecast")
     cursor.execute("DELETE FROM Orders")
     cursor.execute("DELETE FROM Inventory")
+    cursor.execute("DELETE FROM Logistics")  # Added to fix FK constraint
 
     print(">>> Deleting Products")
     cursor.execute("DELETE FROM Products")
