@@ -51,4 +51,4 @@ jobs:
         mysql -h 127.0.0.1 -u root -proot scms < db/schema.sql
 
     - name: Run tests
-      run: pytest tests.py -v
+      run: pytest -v --cov=db --cov-report=term-missing tests.py
